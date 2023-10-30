@@ -1,15 +1,45 @@
 import pygame
 from pygame.locals import *
 import math
+import random
+from collections import deque
 
-# pygame setup
+# Maze setup
+maze_width, maze_height = 128, 72
+cell_size = 40
+maze = [[1 for _ in range(maze_width)] for _ in range(maze_height)]
+
+# Stack for iterative maze generation
+stack = deque()
+
+# Maze generator function (Iterative Backtracking)
+def generate_maze():
+    start_x, start_y = random.randint(0, maze_width - 1), random.randint(0, maze_height - 1)
+    stack.append((start_x, start_y))
+
+    while stack:
+        x, y = stack.pop()
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        random.shuffle(directions)
+
+        for dx, dy in directions:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < maze_width and 0 <= ny < maze_height and maze[ny][nx] == 1:
+                maze[y][x] |= (1 << directions.index((dx, dy)))
+                maze[ny][nx] |= (1 << directions.index((-dx, -dy)))
+                stack.append((nx, ny))
+
+generate_maze()
+
+# Pygame setup
 pygame.init()
-screen = pygame.display.set_mode((1280, 720), RESIZABLE)
+screen = pygame.display.set_mode((maze_width * cell_size, maze_height * cell_size), RESIZABLE)
 clock = pygame.time.Clock()
 running = True
-dt = 0
 
-player_rect = pygame.Rect(640, 360, 20, 20)  # Create a player rectangle
+# Set the player's starting position inside the maze
+player_x, player_y = random.randint(0, maze_width - 1), random.randint(0, maze_height - 1)
+player_rect = pygame.Rect(player_x * cell_size, player_y * cell_size, cell_size, cell_size)
 
 while running:
     for event in pygame.event.get():
@@ -18,9 +48,24 @@ while running:
         elif event.type == VIDEORESIZE:
             screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
 
-    screen.fill("black")
+    screen.fill((0, 0, 0))
 
-    pygame.draw.circle(screen, "red", player_rect.center, 10)
+    for y in range(maze_height):
+        for x in range(maze_width):
+            if maze[y][x] & 1 == 0:  # Check right wall
+                pygame.draw.line(screen, (255, 255, 255), (x * cell_size + cell_size, y * cell_size),
+                                 (x * cell_size + cell_size, y * cell_size + cell_size), 5)
+            if maze[y][x] & 2 == 0:  # Check left wall
+                pygame.draw.line(screen, (255, 255, 255), (x * cell_size, y * cell_size),
+                                 (x * cell_size, y * cell_size + cell_size), 5)
+            if maze[y][x] & 4 == 0:  # Check bottom wall
+                pygame.draw.line(screen, (255, 255, 255), (x * cell_size, y * cell_size + cell_size),
+                                 (x * cell_size + cell_size, y * cell_size + cell_size), 5)
+            if maze[y][x] & 8 == 0:  # Check top wall
+                pygame.draw.line(screen, (255, 255, 255), (x * cell_size, y * cell_size),
+                                 (x * cell_size + cell_size, y * cell_size), 5)
+
+    pygame.draw.circle(screen, (255, 0, 0), player_rect.center, 10)
 
     # Get mouse position
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -36,13 +81,28 @@ while running:
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
-        player_rect.y -= 3
+        new_rect = player_rect.move(0, -cell_size)
+        if all(maze[ny][nx] & 8 == 0 for nx in range(new_rect.left // cell_size, new_rect.right // cell_size)
+                for ny in range(new_rect.top // cell_size, new_rect.bottom // cell_size)):
+            player_rect = new_rect
+
     if keys[pygame.K_s]:
-        player_rect.y += 3
+        new_rect = player_rect.move(0, cell_size)
+        if all(maze[ny][nx] & 4 == 0 for nx in range(new_rect.left // cell_size, new_rect.right // cell_size)
+                for ny in range(new_rect.top // cell_size, new_rect.bottom // cell_size)):
+            player_rect = new_rect
+
     if keys[pygame.K_a]:
-        player_rect.x -= 3
+        new_rect = player_rect.move(-cell_size, 0)
+        if all(maze[ny][nx] & 1 == 0 for nx in range(new_rect.left // cell_size, new_rect.right // cell_size)
+                for ny in range(new_rect.top // cell_size, new_rect.bottom // cell_size)):
+            player_rect = new_rect
+
     if keys[pygame.K_d]:
-        player_rect.x += 3
+        new_rect = player_rect.move(cell_size, 0)
+        if all(maze[ny][nx] & 2 == 0 for nx in range(new_rect.left // cell_size, new_rect.right // cell_size)
+                for ny in range(new_rect.top // cell_size, new_rect.bottom // cell_size)):
+            player_rect = new_rect
 
     pygame.display.flip()
     clock.tick(60)
