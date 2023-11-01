@@ -3,9 +3,10 @@ from pygame.locals import *
 import math
 import random
 from collections import deque
+from math import sin, cos, radians
 
 # Maze setup
-maze_width, maze_height = 128, 72
+maze_width, maze_height = 40, 20
 cell_size = 40
 maze = [[1 for _ in range(maze_width)] for _ in range(maze_height)]
 
@@ -30,6 +31,19 @@ def generate_maze():
                 stack.append((nx, ny))
 
 generate_maze()
+
+def rotate_vector(vector, angle):
+        x = vector[0]*math.cos(angle)-vector[1]*math.sin(angle)
+        y = vector[0]*math.sin(angle)+vector[1]*math.cos(angle)
+        return [x, y]
+
+def pie(scr, color, center, radius, start_angle, stop_angle):
+    theta = start_angle
+    while theta <= stop_angle:
+        pygame.draw.line(scr, color, center,
+                             (center[0]+radius*cos(radians(theta)), center[1]+radius*sin(radians(theta))), 2)
+        theta += 0.01
+
 
 
 
@@ -78,18 +92,7 @@ while running:
     cone_angle = 45
     side_length = length/(math.cos(cone_angle/2))
 
-    def rotate_vector(vector, angle):
-        x = vector[0]*math.cos(angle)-vector[1]*math.sin(angle)
-        y = vector[0]*math.sin(angle)+vector[1]*math.cos(angle)
-        return [x, y]
-
-    def pie(scr, color, center, radius, start_angle, stop_angle):
-        theta = start_angle
-        while theta <= stop_angle:
-            pygame.draw.line(scr, color, center,
-                             (center[0]+radius*cos(radians(theta)), center[1]+radius*sin(radians(theta))), 2)
-            theta += 0.01
-
+    
     if length != 0:
         puffer = direction
         direction = [direction[0] / length, direction[1] / length]
